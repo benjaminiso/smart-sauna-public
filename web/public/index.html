@@ -1,0 +1,511 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Sauna</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #161616;
+            color: white;
+            margin: 0;
+            padding: 30px;
+        }
+
+        h1 {
+            color: orange;
+        }
+
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .card {
+            background: #262626;
+            padding: 25px;
+            border-radius: 12px;
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .value {
+            font-size: 40px;
+            font-weight: bold;
+        }
+
+        #temperature {
+            color: orange;
+        }
+
+        #humidity {
+            color: deepskyblue;
+        }
+
+        .charts {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit, minmax(min(100%, 400px), 1fr)
+            );
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .chart-card {
+            background: #262626;
+            padding: 20px;
+            border-radius: 12px;
+            min-width: 0;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #262626;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+
+        th {
+            background: #333;
+        }
+
+        #status {
+            color: lightgray;
+        }
+
+.profile-section {
+    background: #262626;
+    padding: 25px;
+    border-radius: 12px;
+    margin-top: 25px;
+}
+
+.profile-section label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+}
+
+.profile-section input {
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 10px;
+    width: 100%;
+    max-width: 350px;
+    box-sizing: border-box;
+}
+
+.profile-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px;
+    border-bottom: 1px solid #444;
+}
+
+.profile-row span {
+    flex: 1;
+}
+
+.profile-buttons {
+    margin-top: 20px;
+}
+
+button {
+    background: orange;
+    color: black;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 15px;
+    margin: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #ffbf47;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+
+.readiness-section {
+    background: #262626;
+    padding: 25px;
+    border-radius: 12px;
+    margin-top: 25px;
+}
+
+.readiness-section h2 {
+    margin-top: 0;
+}
+
+#readyMessage {
+    font-size: 32px;
+    margin: 15px 0;
+}
+
+#readyTemperature,
+#readyHumidity {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+#readyProfile {
+    color: lightgray;
+}
+
+#readyConnection {
+    font-size: 14px;
+    margin-bottom: 0;
+}
+
+    </style>
+</head>
+
+<body>
+
+    <h1>Smart Sauna</h1>
+
+    <p id="status">Waiting for measurements...</p>
+
+    <div class="dashboard">
+
+        <div class="card">
+            <h2>Temperature</h2>
+            <div class="value" id="temperature">--</div>
+        </div>
+
+        <div class="card">
+            <h2>Humidity</h2>
+            <div class="value" id="humidity">--</div>
+        </div>
+
+        <div class="card">
+            <h2>Mode</h2>
+            <div id="mode">--</div>
+        </div>
+
+    </div>
+
+
+<div class="readiness-section">
+
+    <h2>Sauna readiness</h2>
+
+    <p id="readyProfile">
+        Active profile: --
+    </p>
+
+    <h1 id="readyMessage">
+        Waiting for sauna data...
+    </h1>
+
+    <p id="readyTemperature">
+        Temperature: --
+    </p>
+
+    <p id="readyHumidity">
+        Humidity: --
+    </p>
+
+    <p id="readyConnection">
+        Connecting...
+    </p>
+
+</div>
+
+    <div class="charts">
+
+        <div class="chart-card">
+            <h2>Temperature history</h2>
+
+            <div class="chart-container">
+                <canvas id="temperatureChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>Humidity history</h2>
+
+            <div class="chart-container">
+                <canvas id="humidityChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+<div class="profile-section">
+
+    <h2>Sauna user profiles</h2>
+
+    <div id="profileList"></div>
+
+    <h3>Create or edit profile</h3>
+
+    <label>Profile name</label>
+    <input type="text" id="profileName"
+           placeholder="Enter name">
+
+    <label>Preferred temperature (°C)</label>
+    <input type="number" id="targetTemperature"
+           min="20" max="100" value="75"
+           step="any" required>
+
+    <label>Preferred humidity (%)</label>
+    <input type="number" id="targetHumidity"
+           min="0" max="100" value="40"
+           step="any" required>
+
+    <div class="profile-buttons">
+
+        <button onclick="saveProfile()">
+            Save profile
+        </button>
+
+        <button onclick="newProfile()">
+            New profile
+        </button>
+
+        <button onclick="deleteProfile()">
+            Delete profile
+        </button>
+
+    </div>
+
+</div>
+
+    <h2>Recent measurements</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Temperature</th>
+                <th>Humidity</th>
+                <th>Mode</th>
+                <th>Time (UTC)</th>
+            </tr>
+        </thead>
+
+        <tbody id="measurements"></tbody>
+    </table>
+
+    <script>
+
+        let temperatureChart;
+        let humidityChart;
+
+        function createChart(id, label, color, maxValue) {
+
+            return new Chart(document.getElementById(id), {
+                type: "line",
+
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: label,
+                        data: [],
+                        borderColor: color,
+                        backgroundColor: color,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 2
+                    }]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: "white"
+                            }
+                        }
+                    },
+
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: "lightgray",
+                                maxTicksLimit: 8
+                            },
+                            grid: {
+                                color: "#333"
+                            }
+                        },
+
+                        y: {
+                            min: 0,
+                            suggestedMax: maxValue,
+                            ticks: {
+                                color: "lightgray"
+                            },
+                            grid: {
+                                color: "#333"
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        if (typeof Chart !== "undefined") {
+
+            temperatureChart = createChart(
+                "temperatureChart",
+                "Temperature (°C)",
+                "orange",
+                100
+            );
+
+            humidityChart = createChart(
+                "humidityChart",
+                "Humidity (%)",
+                "deepskyblue",
+                100
+            );
+
+        } else {
+            console.error("Chart.js could not be loaded.");
+        }
+
+        async function loadData() {
+
+            try {
+
+                const latestResponse =
+                    await fetch("/api/latest");
+
+                if (!latestResponse.ok) {
+                    throw new Error("Could not load data");
+                }
+
+                const latest = await latestResponse.json();
+
+                if (latest.id) {
+
+                    document.getElementById("temperature")
+                        .textContent = latest.temperature + " °C";
+
+                    document.getElementById("humidity")
+                        .textContent = latest.humidity + " %";
+
+                    document.getElementById("mode")
+                        .textContent = latest.mode;
+
+                    document.getElementById("status")
+                        .textContent =
+                        "Latest stored reading: " +
+                        latest.timestamp + " UTC";
+                }
+
+                const response =
+                    await fetch("/api/measurements");
+
+                if (!response.ok) {
+                    throw new Error("Could not load history");
+                }
+
+                const measurements = await response.json();
+
+                // Update recent measurements table
+
+                const table =
+                    document.getElementById("measurements");
+
+                table.replaceChildren();
+
+                measurements.forEach(item => {
+
+                    const row = table.insertRow();
+
+                    const values = [
+                        item.temperature + " °C",
+                        item.humidity + " %",
+                        item.mode,
+                        item.timestamp
+                    ];
+
+                    values.forEach(value => {
+                        row.insertCell().textContent = value;
+                    });
+                });
+
+                // Reverse measurements for chronological graphs
+
+                const history = [...measurements].reverse();
+
+                const labels = history.map(item =>
+                    item.timestamp.split(" ")[1]
+                );
+
+                // Update temperature graph
+
+                if (temperatureChart) {
+
+                    temperatureChart.data.labels = labels;
+
+                    temperatureChart.data.datasets[0].data =
+                        history.map(item => item.temperature);
+
+                    temperatureChart.update();
+                }
+
+                // Update humidity graph
+
+                if (humidityChart) {
+
+                    humidityChart.data.labels = labels;
+
+                    humidityChart.data.datasets[0].data =
+                        history.map(item => item.humidity);
+
+                    humidityChart.update();
+                }
+
+            } catch (error) {
+
+                document.getElementById("status")
+                    .textContent = "Unable to load measurements";
+
+                console.error(error);
+            }
+        }
+
+        loadData();
+
+        setInterval(loadData, 3000);
+
+    </script>
+
+<script src="/profiles.js"></script>
+<script src="/readiness.js"></script>
+</body>
+</html>

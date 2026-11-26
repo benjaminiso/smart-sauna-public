@@ -8,7 +8,7 @@ import paho.mqtt.client as mqtt
 BROKER = "localhost"
 PORT = 1883
 USERNAME = "mqttuser"
-PASSWORD = "asd"
+PASSWORD = "yourpassword"
 TOPIC = "sauna/sensors"
 
 # Database location

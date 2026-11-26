@@ -19,6 +19,7 @@ PASSWORD = getpass("Enter MQTT password: ")
 
 STATUS_TOPIC = "sauna/status"
 PREFIX = "sauna/profiles/"
+CONTROL = "sauna/control/"
 events = SimpleQueue()
 
 connected = False
@@ -29,19 +30,26 @@ last_message = 0
 # MQTT callbacks
 
 def on_connect(client, userdata, flags, reason_code, properties):
-    global connected
+    global connected, latest_status, last_message
 
+    latest_status = {}
+    last_message = 0
     if reason_code == 0:
         connected = True
-        client.subscribe([(STATUS_TOPIC, 0), (PREFIX + "list", 1), (PREFIX + "result", 1)])
+        events.put(("control_reset", {}))
+        client.subscribe([(STATUS_TOPIC, 0), (PREFIX + "list", 1), (PREFIX + "result", 1), (CONTROL + "state", 1), (CONTROL + "result", 1)])
+        client.publish(CONTROL + "request", "{}", qos=1)
         client.publish(PREFIX + "request", "{}")
     else:
         connected = False
 
 
 def on_disconnect(client, userdata, flags, reason_code, properties):
-    global connected
+    global connected, latest_status, last_message
     connected = False
+    latest_status = {}
+    last_message = 0
+    events.put(("control_reset", {}))
 
 
 def on_message(client, userdata, message):
@@ -54,7 +62,12 @@ def on_message(client, userdata, message):
             events.put(("list", data))
         elif message.topic == PREFIX + "result" and isinstance(data, dict):
             events.put(("result", data))
-        elif message.topic == STATUS_TOPIC and isinstance(data, dict):
+        elif message.topic == CONTROL + "state" and isinstance(data, dict):
+            if not message.retain and type(data.get("is_on")) is int and data["is_on"] in (0, 1):
+                events.put(("control_state", data))
+        elif message.topic == CONTROL + "result" and isinstance(data, dict):
+            events.put(("control_result", data))
+        elif message.topic == STATUS_TOPIC and isinstance(data, dict) and not message.retain:
             latest_status = data
             last_message = time.monotonic()
 
@@ -77,7 +90,8 @@ class OplaController:
         self.selected = 0
         self.history = []
 
-        self.sauna_on = False
+        self.sauna_on = None
+        self.last_control_state = 0
         self.selected_profile = 0
         self.pending = None
         self.loaded = False
@@ -130,8 +144,8 @@ class OplaController:
 
         if self.page == "menu":
             return [
-                "Turn sauna OFF" if self.sauna_on
-                else "Turn sauna ON",
+                ("Sauna control unavailable" if not self.control_available()
+                 else "Turn sauna OFF" if self.sauna_on else "Turn sauna ON"),
                 "Profiles",
                 "Notifications"
             ]
@@ -164,62 +178,47 @@ class OplaController:
             else:
                 self.write(start_row + index - offset, "  " + item)
 
-    def draw_home(self):
-
-        status = latest_status.copy()
-
-        self.write(
-            4,
-            "Sauna: " + ("ON" if self.sauna_on else "OFF")
-        )
-
-        self.write(
-            5,
-            "MQTT: " + ("ONLINE" if connected else "OFFLINE"),
-            curses.color_pair(1 if connected else 3)
-        )
-
+    def readiness_display(self, status):
         if not connected:
-            self.write(7, "Connection lost", curses.color_pair(3))
-            self.write(8, "LED: RED", curses.color_pair(3))
-            return
+            return "CONNECTION LOST", "RED", 3
+        if not self.control_available():
+            return "CONTROL STATE UNAVAILABLE", "RED", 3
+        if not status or time.monotonic() - last_message > 15:
+            return "NO RECENT SAUNA DATA", "RED", 3
+        if status.get("state") == "error":
+            return "SERVICE ERROR", "RED", 3
+        if status.get("sauna_on") is not self.sauna_on:
+            return "WAITING FOR UPDATED STATUS", "ORANGE", 2
+        return {
+            "off": ("SAUNA OFF", "OFF", 0),
+            "heating": ("SAUNA HEATING", "ORANGE", 2),
+            "ready": ("SAUNA READY", "GREEN", 1),
+            "no_profile": ("NO ACTIVE PROFILE", "ORANGE", 2),
+            "unknown": ("STATE UNAVAILABLE", "RED", 3),
+        }.get(status.get("state"), ("UNKNOWN STATUS", "RED", 3))
 
-        if not status:
-            self.write(7, "Waiting for measurements...")
-            return
+    def draw_home(self):
+        status = latest_status.copy()
+        self.write(4, "Sauna: " + (("ON" if self.sauna_on else "OFF")
+                   if self.control_available() else "UNKNOWN"))
+        self.write(5, "MQTT: " + ("ONLINE" if connected else "OFFLINE"),
+                   curses.color_pair(1 if connected else 3))
 
-        if time.monotonic() - last_message > 15:
-            self.write(7, "No recent sauna data")
-            self.write(8, "LED: RED", curses.color_pair(3))
-            return
+        fresh = connected and time.monotonic() - last_message <= 15
+        if fresh and status.get("state") != "error":
+            for row, label, key, unit in [
+                (7, "Temperature", "temperature", " C"),
+                (8, "Humidity", "humidity", " %"),
+                (10, "Backend profile", "profile", ""),
+                (11, "Target temperature", "target_temperature", " C"),
+                (12, "Target humidity", "target_humidity", " %"),
+            ]:
+                value = status.get(key)
+                self.write(row, f"{label}: {value if value is not None else '-'}{unit}")
 
-        self.write(7, "Temperature: {} C".format(
-            status.get("temperature", "-")
-        ))
-
-        self.write(8, "Humidity: {} %".format(
-            status.get("humidity", "-")
-        ))
-
-        self.write(10, "Backend profile: {}".format(
-            status.get("profile", "-")
-        ))
-
-        self.write(11, "Target temperature: {} C".format(
-            status.get("target_temperature", "-")
-        ))
-
-        self.write(12, "Target humidity: {} %".format(
-            status.get("target_humidity", "-")
-        ))
-
-        if status.get("ready"):
-            self.write(14, "SAUNA READY", curses.color_pair(1))
-            self.write(15, "LED: GREEN", curses.color_pair(1))
-        else:
-            self.write(14, "SAUNA NOT READY", curses.color_pair(2))
-            self.write(15, "LED: ORANGE", curses.color_pair(2))
-
+        message, led, color = self.readiness_display(status)
+        self.write(14, message, curses.color_pair(color))
+        self.write(15, "LED: " + led, curses.color_pair(color))
         self.write(17, "Press OK to open menu")
 
     def draw_edit(self):
@@ -297,20 +296,8 @@ class OplaController:
         elif self.page == "notifications":
             self.write(4, "NOTIFICATIONS")
 
-            if not connected:
-                self.write(6, "MQTT connection lost",
-                           curses.color_pair(3))
-
-            elif time.monotonic() - last_message > 15:
-                self.write(6, "No recent sensor data",
-                           curses.color_pair(3))
-
-            elif latest_status.get("ready"):
-                self.write(6, "Sauna is ready",
-                           curses.color_pair(1))
-
-            else:
-                self.write(6, "No active notifications")
+            message, led, color = self.readiness_display(latest_status.copy())
+            self.write(6, message, curses.color_pair(color))
 
         if self.notification:
             self.write(19, self.notification)
@@ -355,7 +342,7 @@ class OplaController:
 
             elif self.edit_step == 1:
                 self.draft["target_temperature"] = max(
-                    0, min(100,
+                    20, min(100,
                            self.draft["target_temperature"] + direction)
                 )
 
@@ -377,6 +364,23 @@ class OplaController:
     
     def profile(self):
         return next((p for p in profiles if p["id"] == self.selected_profile), None)
+
+    def control_available(self):
+        return (connected and self.sauna_on is not None
+                and time.monotonic() - self.last_control_state <= 15)
+
+    def send_control(self):
+        if not self.control_available():
+            self.notification = "Sauna control unavailable"
+            return
+        request_id = uuid.uuid4().hex
+        payload = {"is_on": 0 if self.sauna_on else 1, "request_id": request_id}
+        result = client.publish(CONTROL + "set", json.dumps(payload), qos=1)
+        if result.rc != mqtt.MQTT_ERR_SUCCESS:
+            self.notification = "Could not send sauna command"
+            return
+        self.pending = (request_id, "control", time.monotonic())
+        self.notification = "Waiting for backend..."
 
     def send(self, action, data):
         if not connected or not self.loaded:
@@ -401,7 +405,21 @@ class OplaController:
                 kind, data = events.get_nowait()
             except Empty:
                 break
-            if kind == "list":
+            if kind == "control_reset":
+                self.sauna_on = None
+                self.last_control_state = 0
+            elif kind == "control_state":
+                self.sauna_on = data["is_on"] == 1
+                self.last_control_state = time.monotonic()
+            elif kind == "control_result":
+                if self.pending and self.pending[1] == "control" and data.get("request_id") == self.pending[0]:
+                    self.pending = None
+                    if data.get("success"):
+                        self.sauna_on = None
+                        self.home()
+                    self.notification = data.get("message", "Unknown result")
+                    client.publish(CONTROL + "request", "{}", qos=1)
+            elif kind == "list":
                 old_id = (profiles[self.selected]["id"]
                           if self.page == "profiles" and self.selected < len(profiles) else None)
                 profiles = data
@@ -411,7 +429,7 @@ class OplaController:
                 if self.page in ("profile_options", "delete", "edit") and not (self.page == "edit" and self.adding_profile) and self.profile() is None:
                     self.home()
                     self.notification = "Profile no longer exists"
-            elif self.pending and data.get("request_id") == self.pending[0]:
+            elif kind == "result" and self.pending and self.pending[1] != "control" and data.get("request_id") == self.pending[0]:
                 action = self.pending[1]
                 self.pending = None
                 if data.get("success"):
@@ -423,11 +441,18 @@ class OplaController:
         now = time.monotonic()
         if connected and now - self.last_request >= 5:
             client.publish(PREFIX + "request", "{}")
+            client.publish(CONTROL + "request", "{}", qos=1)
             self.last_request = now
         if self.pending and now - self.pending[2] > 12:
+            action = self.pending[1]
             self.pending = None
-            self.notification = "Result unknown; check profiles before retry"
-            client.publish(PREFIX + "request", "{}")
+            if action == "control":
+                self.sauna_on = None
+                self.notification = "Result unknown; checking sauna state"
+                client.publish(CONTROL + "request", "{}", qos=1)
+            else:
+                self.notification = "Result unknown; check profiles before retry"
+                client.publish(PREFIX + "request", "{}")
 
     def confirm(self):
 
@@ -437,8 +462,7 @@ class OplaController:
         elif self.page == "menu":
 
             if self.selected == 0:
-                self.sauna_on = not self.sauna_on
-                self.home()
+                self.send_control()
 
             elif self.selected == 1:
                 self.open_page("profiles")

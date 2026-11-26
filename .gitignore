@@ -1,16 +1,20 @@
+# Dependencies
 venv/
 node_modules/
+
+# Python cache
 __pycache__/
 *.pyc
+
+# Local configuration and logs
 .env
 *.log
+
+# SQLite temporary files
 *.db-wal
 *.db-shm
 *.db-journal
 
-# Local database backups
-database/*backup*.db
-
-# Opla simulator backups
-opla-controller/*backup*.py
-opla-controller/*before_mqtt*.py
+# All backup files
+*backup*
+*_before_*

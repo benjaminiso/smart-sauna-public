@@ -183,7 +183,41 @@ button:disabled {
     font-size: 14px;
     margin-bottom: 0;
 }
+/* Sauna ON/OFF controls */
 
+.control-section {
+    background: #262626;
+    padding: 25px;
+    border-radius: 12px;
+    margin-top: 25px;
+}
+
+.control-section h2 {
+    margin-top: 0;
+}
+
+#saunaState {
+    font-size: 32px;
+    font-weight: bold;
+    margin: 15px 0;
+}
+
+#controlMessage {
+    color: lightgray;
+    font-size: 14px;
+}
+
+#saunaState.on {
+    color: lightgreen;
+}
+
+#saunaState.off {
+    color: lightgray;
+}
+
+#saunaState.unknown {
+    color: orange;
+}
     </style>
 </head>
 
@@ -212,7 +246,27 @@ button:disabled {
 
     </div>
 
+<div class="control-section">
 
+    <h2>Sauna control</h2>
+
+    <div id="saunaState" class="unknown">
+        Loading sauna state...
+    </div>
+
+    <button id="saunaOnButton" disabled>
+        Turn ON
+    </button>
+
+    <button id="saunaOffButton" disabled>
+        Turn OFF
+    </button>
+
+    <p id="controlMessage">
+        Connecting to backend...
+    </p>
+
+</div>
 <div class="readiness-section">
 
     <h2>Sauna readiness</h2>
@@ -507,5 +561,6 @@ button:disabled {
 
 <script src="/profiles.js"></script>
 <script src="/readiness.js"></script>
+<script src="/control.js"></script>
 </body>
 </html>

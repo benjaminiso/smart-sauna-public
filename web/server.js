@@ -26,6 +26,28 @@ const db = new sqlite3.Database(
 );
 
 db.configure("busyTimeout", 5000);
+// Initialize sauna state table
+function initializeSaunaState(callback) {
+    db.run(
+        `CREATE TABLE IF NOT EXISTS sauna_state (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            is_on INTEGER NOT NULL DEFAULT 0
+                CHECK (is_on IN (0, 1)),
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+        (err) => {
+            if (err) {
+                return callback(err);
+            }
+
+            db.run(
+                `INSERT OR IGNORE INTO sauna_state (id, is_on)
+                 VALUES (1, 0)`,
+                callback
+            );
+        }
+    );
+}
 
 // Middleware
 app.use(express.json());
@@ -273,11 +295,92 @@ app.delete("/api/profiles/:id", (req, res) => {
 app.get("/api/status", (req, res) => {
     res.json(saunaMqtt.getStatus());
 });
+
+// =============================
+// SAUNA ON/OFF STATE
+// =============================
+
+// Get current sauna state
+app.get("/api/sauna/state", (req, res) => {
+    db.get(
+        "SELECT * FROM sauna_state WHERE id = 1",
+        (err, row) => {
+            if (err) {
+                return res.status(500).json({
+                    error: err.message
+                });
+            }
+
+            if (!row) {
+                return res.status(404).json({
+                    error: "Sauna state not found"
+                });
+            }
+
+            res.json(row);
+        }
+    );
+});
+
+// Change sauna ON/OFF state
+app.put("/api/sauna/state", (req, res) => {
+
+    const is_on = req.body?.is_on;
+
+    // Only accept 0 (OFF) or 1 (ON)
+    if (is_on !== 0 && is_on !== 1) {
+        return res.status(400).json({
+            error: "Sauna state must be 0 or 1"
+        });
+    }
+
+    db.run(
+        `UPDATE sauna_state
+         SET is_on = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = 1`,
+
+        [is_on],
+
+        function (err) {
+            if (err) {
+                return res.status(500).json({
+                    error: err.message
+                });
+            }
+
+            if (this.changes === 0) {
+                return res.status(404).json({
+                    error: "Sauna state not found"
+                });
+            }
+
+            res.json({
+                message: is_on === 1
+                    ? "Sauna turned ON"
+                    : "Sauna turned OFF",
+                is_on: is_on
+            });
+        }
+    );
+});
 // =============================
 // START SERVER
 // =============================
 
-app.listen(PORT, "0.0.0.0", () => {
-    console.log("Smart Sauna web server running!");
-    console.log(`Port: ${PORT}`);
+initializeSaunaState((err) => {
+    if (err) {
+        console.error(
+            "Failed to initialize sauna state:",
+            err.message
+        );
+        process.exit(1);
+    }
+
+    console.log("Sauna state initialized!");
+
+    app.listen(PORT, "0.0.0.0", () => {
+        console.log("Smart Sauna web server running!");
+        console.log(`Port: ${PORT}`);
+    });
 });

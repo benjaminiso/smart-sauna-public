@@ -4,9 +4,18 @@ const mqtt = require("mqtt");
 let latestStatus = null;
 let lastReceived = 0;
 
-const client = mqtt.connect("mqtt://localhost:1883", {
-    username: "mqttuser",
-    password: "Yourpassword"
+const host = process.env.MQTT_HOST || "localhost";
+const port = process.env.MQTT_PORT || "1883";
+const username = process.env.MQTT_USERNAME || "mqttuser";
+const password = process.env.MQTT_PASSWORD;
+
+if (!password) {
+  throw new Error("MQTT_PASSWORD puuttuu. Lataa paikallinen .env ennen käynnistystä.");
+}
+
+const client = mqtt.connect(`mqtt://${host}:${port}`, {
+  username,
+  password,
 });
 
 client.on("connect", () => {

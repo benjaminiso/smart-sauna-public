@@ -3,12 +3,16 @@ import json
 import sqlite3
 from pathlib import Path
 import paho.mqtt.client as mqtt
+import os
 
 # MQTT configuration
-BROKER = "localhost"
-PORT = 1883
-USERNAME = "mqttuser"
-PASSWORD = "yourpassword"
+BROKER = os.getenv("MQTT_HOST", "localhost")
+PORT = int(os.getenv("MQTT_PORT", "1883"))
+USERNAME = os.getenv("MQTT_USERNAME", "mqttuser")
+PASSWORD = os.getenv("MQTT_PASSWORD")
+
+if not PASSWORD:
+    raise SystemExit("MQTT_PASSWORD puuttuu. Lataa paikallinen .env ennen käynnistystä.")
 TOPIC = "sauna/sensors"
 
 # Database location

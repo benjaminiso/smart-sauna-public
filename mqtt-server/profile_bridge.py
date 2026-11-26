@@ -1,10 +1,10 @@
 
 import json
 import time
-import getpass
 import urllib.request
 import urllib.error
 import threading
+import os
 
 import paho.mqtt.client as mqtt
 
@@ -13,11 +13,13 @@ import paho.mqtt.client as mqtt
 # CONFIGURATION
 # =============================
 
-BROKER = "localhost"
-PORT = 1883
+BROKER = os.getenv("MQTT_HOST", "localhost")
+PORT = int(os.getenv("MQTT_PORT", "1883"))
+USERNAME = os.getenv("MQTT_USERNAME", "mqttuser")
+PASSWORD = os.getenv("MQTT_PASSWORD")
 
-USERNAME = "mqttuser"
-PASSWORD = getpass.getpass("Enter MQTT password: ")
+if not PASSWORD:
+    raise SystemExit("MQTT_PASSWORD puuttuu. Lataa paikallinen .env ennen käynnistystä.")
 
 API_URL = "http://127.0.0.1:3000/api/profiles"
 STATE_API_URL = "http://127.0.0.1:3000/api/sauna/state"

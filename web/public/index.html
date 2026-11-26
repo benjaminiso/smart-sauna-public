@@ -227,6 +227,8 @@ button:disabled {
 
     <p id="status">Waiting for measurements...</p>
 
+    <h2>Kotisauna</h2>
+
     <div class="dashboard">
 
         <div class="card">
@@ -245,6 +247,23 @@ button:disabled {
         </div>
 
     </div>
+
+
+<section class="card" aria-labelledby="rantaTitle">
+  <h2 id="rantaTitle">Rantasauna</h2>
+  <p>Puukiuas – ei etäohjausta</p>
+  <dl>
+    <dt>Lämpötila</dt>
+    <dd id="rantaTemperature">—</dd>
+    <dt>Ilmankosteus</dt>
+    <dd id="rantaHumidity">—</dd>
+    <dt>Viimeisin tallennus (UTC)</dt>
+    <dd id="rantaTimestamp">—</dd>
+  </dl>
+  <p id="rantaStatus" role="status">Odotetaan mittauksia.</p>
+</section>
+
+
 
 <div class="control-section">
 
@@ -562,5 +581,6 @@ button:disabled {
 <script src="/profiles.js"></script>
 <script src="/readiness.js"></script>
 <script src="/control.js"></script>
+<script src="/ranta.js"></script>
 </body>
 </html>

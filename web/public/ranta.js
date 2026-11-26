@@ -3,6 +3,19 @@
   const humidity = document.getElementById("rantaHumidity");
   const timestamp = document.getElementById("rantaTimestamp");
   const status = document.getElementById("rantaStatus");
+  const heater = document.getElementById("rantaHeater");
+const frostAlarm = document.getElementById("rantaFrostAlarm");
+
+function showFrostProtection(protection) {
+  if (protection?.state !== "automatic") {
+    heater.textContent = "Tila ei tiedossa";
+    frostAlarm.textContent = "Ei arvioitavissa";
+    return;
+  }
+
+  heater.textContent = protection.heating_requested ? "PÄÄLLÄ" : "POIS";
+  frostAlarm.textContent = protection.frost_alarm ? "PAKKASHÄLYTYS" : "Ei hälytystä";
+}
 
   const numberFormat = new Intl.NumberFormat("fi-FI", {
     maximumFractionDigits: 1,
@@ -33,6 +46,7 @@
         humidity.textContent = "—";
         timestamp.textContent = "—";
         setStatus("Rantasaunalta ei ole vielä tallennettuja mittauksia.");
+        showFrostProtection();
         return;
       }
 
@@ -57,14 +71,17 @@
 
       if (Date.now() - savedAt > 15_000) {
         setStatus("Mittaus on vanhentunut – uutta dataa ei ole tallentunut.");
+        showFrostProtection();
       } else {
         setStatus(
           reading.mode === "simulation" ? "Simuloitu mittaus" : "Tuore mittaus"
         );
+        showFrostProtection(reading.frost_protection);
       }
     } catch (error) {
       setStatus("Mittauksia ei saatu haettua. Näkyvät lukemat voivat olla vanhoja.");
       console.warn("Rantasaunan mittaushaku epäonnistui:", error);
+      showFrostProtection();
     } finally {
       // Seuraava haku alkaa vasta edellisen päätyttyä.
       setTimeout(refreshRanta, 3000);

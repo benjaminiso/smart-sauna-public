@@ -66,6 +66,30 @@ function getMeasurementSauna(req) {
   return saunaId === "koti" || saunaId === "ranta" ? saunaId : null;
 }
 
+function getRantaFrostProtection(reading) {
+  const savedAt = typeof reading.timestamp === "string"
+    ? Date.parse(reading.timestamp.replace(" ", "T") + "Z")
+    : NaN;
+
+  if (
+    !Number.isFinite(reading.temperature) ||
+    !Number.isFinite(savedAt) ||
+    Date.now() - savedAt > 15_000
+  ) {
+    return {
+      state: "unknown",
+      heating_requested: null,
+      frost_alarm: null,
+    };
+  }
+
+  return {
+    state: "automatic",
+    heating_requested: reading.temperature < 3,
+    frost_alarm: reading.temperature < 0,
+  };
+}
+
 app.get("/api/latest", (req, res) => {
   const saunaId = getMeasurementSauna(req);
   if (saunaId === null) {
@@ -79,6 +103,13 @@ app.get("/api/latest", (req, res) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
+      if (saunaId === "ranta" && row) {
+        return res.json({
+          ...row,
+          frost_protection: getRantaFrostProtection(row),
+        });
+      }
+
       res.json(row || {});
     }
   );

@@ -66,6 +66,20 @@ function getMeasurementSauna(req) {
   return saunaId === "koti" || saunaId === "ranta" ? saunaId : null;
 }
 
+// Tallennetaan vain palvelimen muistiin. Uudelleenkäynnistys palauttaa automatiikan.
+let rantaRemoteRequest = false;
+
+app.put("/api/ranta/pipe-heater", (req, res) => {
+  const requested = req.body?.remote_requested;
+
+  if (typeof requested !== "boolean") {
+    return res.status(400).json({ error: "remote_requested pitää olla true tai false." });
+  }
+
+  rantaRemoteRequest = requested;
+  res.json({ remote_requested: rantaRemoteRequest });
+});
+
 function getRantaFrostProtection(reading) {
   const savedAt = typeof reading.timestamp === "string"
     ? Date.parse(reading.timestamp.replace(" ", "T") + "Z")
@@ -80,14 +94,20 @@ function getRantaFrostProtection(reading) {
       state: "unknown",
       heating_requested: null,
       frost_alarm: null,
+      remote_requested: rantaRemoteRequest,
+      heater_on: null,
     };
   }
+const automaticRequest = reading.temperature < 3;
 
-  return {
-    state: "automatic",
-    heating_requested: reading.temperature < 3,
-    frost_alarm: reading.temperature < 0,
-  };
+return {
+  state: "automatic",
+  heating_requested: automaticRequest,
+  remote_requested: rantaRemoteRequest,
+  heater_on: automaticRequest || rantaRemoteRequest,
+  frost_alarm: reading.temperature < 0,
+};
+
 }
 
 app.get("/api/latest", (req, res) => {
@@ -103,10 +123,10 @@ app.get("/api/latest", (req, res) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
-      if (saunaId === "ranta" && row) {
+      if (saunaId === "ranta") {
         return res.json({
-          ...row,
-          frost_protection: getRantaFrostProtection(row),
+          ...(row || {}),
+          frost_protection: getRantaFrostProtection(row || {}),
         });
       }
 

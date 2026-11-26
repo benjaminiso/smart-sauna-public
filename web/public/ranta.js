@@ -4,18 +4,65 @@
   const timestamp = document.getElementById("rantaTimestamp");
   const status = document.getElementById("rantaStatus");
   const heater = document.getElementById("rantaHeater");
-const frostAlarm = document.getElementById("rantaFrostAlarm");
+  const frostAlarm = document.getElementById("rantaFrostAlarm");
+const autoRequest = document.getElementById("rantaAutoRequest");
+const remoteRequest = document.getElementById("rantaRemoteRequest");
+const requestHeat = document.getElementById("rantaRequestHeat");
+const returnToAuto = document.getElementById("rantaReturnToAuto");
+const commandStatus = document.getElementById("rantaCommandStatus");
+
+let sendingCommand = false;
+
+function yesNo(value) {
+  return value === true ? "Kyllä" : value === false ? "Ei" : "Ei tiedossa";
+}
 
 function showFrostProtection(protection) {
-  if (protection?.state !== "automatic") {
-    heater.textContent = "Tila ei tiedossa";
-    frostAlarm.textContent = "Ei arvioitavissa";
-    return;
-  }
+  autoRequest.textContent = yesNo(protection?.heating_requested);
+  remoteRequest.textContent = yesNo(protection?.remote_requested);
 
-  heater.textContent = protection.heating_requested ? "PÄÄLLÄ" : "POIS";
-  frostAlarm.textContent = protection.frost_alarm ? "PAKKASHÄLYTYS" : "Ei hälytystä";
+  heater.textContent = protection?.heater_on === true ? "PÄÄLLÄ"
+    : protection?.heater_on === false ? "POIS"
+    : "Tila ei tiedossa";
+
+  frostAlarm.textContent = protection?.frost_alarm === true ? "PAKKASHÄLYTYS"
+    : protection?.frost_alarm === false ? "Ei hälytystä"
+    : "Ei arvioitavissa";
 }
+
+async function setRemoteRequest(requested) {
+  if (sendingCommand) return;
+
+  sendingCommand = true;
+  requestHeat.disabled = true;
+  returnToAuto.disabled = true;
+  commandStatus.textContent = "Lähetetään pyyntöä…";
+
+  try {
+    const response = await fetch("/api/ranta/pipe-heater", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ remote_requested: requested }),
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    commandStatus.textContent = requested
+      ? "Palvelin vastaanotti etälämmityspyynnön."
+      : "Etäpyyntö poistettu. Automatiikka jatkaa normaalisti.";
+  } catch (error) {
+    commandStatus.textContent =
+      "Pyynnön vastaanottoa ei voitu vahvistaa. Tarkista etäpyynnön tila.";
+  } finally {
+    sendingCommand = false;
+    requestHeat.disabled = false;
+    returnToAuto.disabled = false;
+  }
+}
+
+requestHeat.addEventListener("click", () => setRemoteRequest(true));
+returnToAuto.addEventListener("click", () => setRemoteRequest(false));
 
   const numberFormat = new Intl.NumberFormat("fi-FI", {
     maximumFractionDigits: 1,
@@ -39,6 +86,7 @@ function showFrostProtection(protection) {
       }
 
       const reading = await response.json();
+      showFrostProtection(reading.frost_protection);
 
       // API palauttaa tyhjän objektin, jos mittauksia ei vielä ole.
       if (reading.id == null) {
@@ -46,7 +94,6 @@ function showFrostProtection(protection) {
         humidity.textContent = "—";
         timestamp.textContent = "—";
         setStatus("Rantasaunalta ei ole vielä tallennettuja mittauksia.");
-        showFrostProtection();
         return;
       }
 
@@ -71,12 +118,10 @@ function showFrostProtection(protection) {
 
       if (Date.now() - savedAt > 15_000) {
         setStatus("Mittaus on vanhentunut – uutta dataa ei ole tallentunut.");
-        showFrostProtection();
       } else {
         setStatus(
           reading.mode === "simulation" ? "Simuloitu mittaus" : "Tuore mittaus"
         );
-        showFrostProtection(reading.frost_protection);
       }
     } catch (error) {
       setStatus("Mittauksia ei saatu haettua. Näkyvät lukemat voivat olla vanhoja.");

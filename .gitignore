@@ -7,3 +7,10 @@ __pycache__/
 *.db-wal
 *.db-shm
 *.db-journal
+
+# Local database backups
+database/*backup*.db
+
+# Opla simulator backups
+opla-controller/*backup*.py
+opla-controller/*before_mqtt*.py

@@ -6,7 +6,7 @@ let lastReceived = 0;
 
 const client = mqtt.connect("mqtt://localhost:1883", {
     username: "mqttuser",
-    password: "YOUR_PASSWORD"
+    password: "asd"
 });
 
 client.on("connect", () => {

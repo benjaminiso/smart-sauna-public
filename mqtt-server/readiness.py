@@ -9,7 +9,7 @@ import paho.mqtt.client as mqtt
 BROKER = "localhost"
 PORT = 1883
 USERNAME = "mqttuser"
-PASSWORD = "YOUR_PASSWORD
+PASSWORD = "asd"
 
 SENSOR_TOPIC = "sauna/sensors"
 STATUS_TOPIC = "sauna/status"

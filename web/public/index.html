@@ -218,6 +218,73 @@ button:disabled {
 #saunaState.unknown {
     color: orange;
 }
+/* Keskitä sisältöalue, älä yksittäisiä tekstejä. */
+body {
+  max-width: 1150px;
+  margin-inline: auto;
+  padding: clamp(16px, 3vw, 32px);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Selkeä reunus sekä vanhoille että uusille osioille. */
+.card,
+.control-section,
+.readiness-section,
+.profile-section,
+.chart-card {
+  border: 1px solid #4a4a4a;
+}
+
+.ranta-card {
+  margin-top: 24px;
+  border-color: #36718a;
+}
+
+.ranta-card h2 {
+  margin-top: 0;
+}
+
+.ranta-card dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px 20px;
+  max-width: 34rem;
+}
+
+.ranta-card dd {
+  margin: 0;
+  text-align: right;
+}
+
+#rantaTemperature,
+#rantaHumidity {
+  font-size: 1.65rem;
+  font-weight: bold;
+}
+
+#rantaTemperature {
+  color: orange;
+}
+
+#rantaHumidity {
+  color: deepskyblue;
+}
+
+/* Kapealla näytöllä arvo tulee otsikon alle. */
+@media (max-width: 480px) {
+  .ranta-card dl {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .ranta-card dd {
+    text-align: left;
+    margin-bottom: 10px;
+  }
+}
+
     </style>
 </head>
 
@@ -249,7 +316,7 @@ button:disabled {
     </div>
 
 
-<section class="card" aria-labelledby="rantaTitle">
+<section class="card ranta-card" aria-labelledby="rantaTitle">
   <h2 id="rantaTitle">Rantasauna</h2>
   <p>Puukiuas – ei etäohjausta</p>
   <dl>

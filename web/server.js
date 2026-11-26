@@ -61,36 +61,49 @@ app.use(express.static(
 // =============================
 
 // Get latest measurement
-app.get("/api/latest", (req, res) => {
-    db.get(
-        "SELECT * FROM measurements ORDER BY id DESC LIMIT 1",
-        (err, row) => {
-            if (err) {
-                return res.status(500).json({
-                    error: err.message
-                });
-            }
+function getMeasurementSauna(req) {
+  const saunaId = req.query.sauna ?? "koti";
+  return saunaId === "koti" || saunaId === "ranta" ? saunaId : null;
+}
 
-            res.json(row || {});
-        }
-    );
+app.get("/api/latest", (req, res) => {
+  const saunaId = getMeasurementSauna(req);
+  if (saunaId === null) {
+    return res.status(400).json({ error: "Saunan pitää olla koti tai ranta." });
+  }
+
+  db.get(
+    "SELECT * FROM measurements WHERE sauna_id = ? ORDER BY id DESC LIMIT 1",
+    [saunaId],
+    (err, row) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json(row || {});
+    }
+  );
 });
+
 
 // Get latest 20 measurements
 app.get("/api/measurements", (req, res) => {
-    db.all(
-        "SELECT * FROM measurements ORDER BY id DESC LIMIT 20",
-        (err, rows) => {
-            if (err) {
-                return res.status(500).json({
-                    error: err.message
-                });
-            }
+  const saunaId = getMeasurementSauna(req);
+  if (saunaId === null) {
+    return res.status(400).json({ error: "Saunan pitää olla koti tai ranta." });
+  }
 
-            res.json(rows);
-        }
-    );
+  db.all(
+    "SELECT * FROM measurements WHERE sauna_id = ? ORDER BY id DESC LIMIT 20",
+    [saunaId],
+    (err, rows) => {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json(rows);
+    }
+  );
 });
+
 
 // =============================
 // USER PROFILES

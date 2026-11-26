@@ -1,70 +1,113 @@
-
 import json
+import math
+import os
 import sqlite3
 from pathlib import Path
-import paho.mqtt.client as mqtt
-import os
 
-# MQTT configuration
+import paho.mqtt.client as mqtt
+
 BROKER = os.getenv("MQTT_HOST", "localhost")
 PORT = int(os.getenv("MQTT_PORT", "1883"))
 USERNAME = os.getenv("MQTT_USERNAME", "mqttuser")
 PASSWORD = os.getenv("MQTT_PASSWORD")
 
-if not PASSWORD:
-    raise SystemExit("MQTT_PASSWORD puuttuu. Lataa paikallinen .env ennen käynnistystä.")
-TOPIC = "sauna/sensors"
-
-# Database location
 DB_PATH = Path(__file__).resolve().parent.parent / "database" / "sauna.db"
 
-# Create database and table
-with sqlite3.connect(DB_PATH) as conn:
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS measurements (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            temperature REAL NOT NULL,
-            humidity REAL NOT NULL,
-            mode TEXT NOT NULL,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
+SAUNA_BY_TOPIC = {
+    "sauna/sensors": "koti",
+    "sauna/ranta/sensors": "ranta",
+}
+
+
+def initialize_database():
+    with sqlite3.connect(DB_PATH, timeout=5) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS measurements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                temperature REAL NOT NULL,
+                humidity REAL NOT NULL,
+                mode TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(measurements)")
+        }
+        if "sauna_id" not in columns:
+            conn.execute("""
+                ALTER TABLE measurements
+                ADD COLUMN sauna_id TEXT NOT NULL DEFAULT 'koti'
+                CHECK (sauna_id IN ('koti', 'ranta'))
+            """)
+
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_measurements_sauna_id_id
+            ON measurements (sauna_id, id)
+        """)
+
 
 def on_connect(client, userdata, flags, reason_code, properties):
     if reason_code == 0:
-        print("Connected to MQTT broker!")
-        client.subscribe(TOPIC)
+        client.subscribe([(topic, 1) for topic in SAUNA_BY_TOPIC])
+        print("MQTT-yhteys muodostettu. Kuunnellaan molempia saunoja.")
     else:
-        print(f"Connection failed: {reason_code}")
+        print(f"MQTT-yhteys epäonnistui: {reason_code}")
+
 
 def on_message(client, userdata, msg):
+    sauna_id = SAUNA_BY_TOPIC.get(msg.topic)
+    if sauna_id is None:
+        return
+
     try:
-        data = json.loads(msg.payload.decode())
+        data = json.loads(msg.payload.decode("utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("Mittauksen pitää olla JSON-objekti")
 
         temperature = float(data["temperature"])
         humidity = float(data["humidity"])
         mode = data.get("mode", "unknown")
 
-        with sqlite3.connect(DB_PATH) as conn:
+        if not math.isfinite(temperature) or not 0 <= humidity <= 100:
+            raise ValueError("Virheellinen lämpötila tai kosteus")
+        if not isinstance(mode, str):
+            raise ValueError("Virheellinen mittaustila")
+
+        with sqlite3.connect(DB_PATH, timeout=5) as conn:
             conn.execute("""
                 INSERT INTO measurements
-                (temperature, humidity, mode)
-                VALUES (?, ?, ?)
-            """, (temperature, humidity, mode))
+                    (sauna_id, temperature, humidity, mode)
+                VALUES (?, ?, ?, ?)
+            """, (sauna_id, temperature, humidity, mode))
 
-        print(f"Saved: {temperature}°C, {humidity}%")
+        print(f"[{sauna_id}] Tallennettu: {temperature} °C / {humidity} %")
 
-    except Exception as error:
-        print(f"Error: {error}")
+    except (KeyError, TypeError, ValueError, OverflowError, sqlite3.Error) as error:
+        print(f"[{sauna_id}] Mittausta ei tallennettu: {error}")
 
-client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-client.username_pw_set(USERNAME, PASSWORD)
 
-client.on_connect = on_connect
-client.on_message = on_message
+def main():
+    if not PASSWORD:
+        raise SystemExit("MQTT_PASSWORD puuttuu. Lataa paikallinen .env.")
 
-client.connect(BROKER, PORT, 60)
+    initialize_database()
+    print("Mittaustaulu valmis.")
 
-print("Smart Sauna Ingestor started!")
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    client.username_pw_set(USERNAME, PASSWORD)
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(BROKER, PORT, 60)
 
-client.loop_forever()
+    try:
+        client.loop_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        client.disconnect()
+
+
+if __name__ == "__main__":
+    main()

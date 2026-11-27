@@ -18,3 +18,7 @@ __pycache__/
 # All backup files
 *backup*
 *_before_*
+
+# Local Rantasauna settings
+database/ranta-settings.json
+database/ranta-settings.json.tmp

@@ -33,7 +33,7 @@ latest_status = {}
 last_message = 0
 
 RANTA_URL = "http://127.0.0.1:3000/api/latest?sauna=ranta"
-
+WEATHER_URL = "http://127.0.0.1:3000/api/ranta/weather"
 
 def poll_ranta():
     while True:
@@ -51,7 +51,21 @@ def poll_ranta():
             events.put(("ranta_status", None))
 
         time.sleep(3)
+def poll_weather():
+    while True:
+        try:
+            with urlopen(WEATHER_URL, timeout=5) as response:
+                weather = json.load(response)
 
+            if not isinstance(weather, dict):
+                raise ValueError("Invalid weather response")
+
+            events.put(("weather_status", weather))
+
+        except (OSError, HTTPException, ValueError):
+            events.put(("weather_status", None))
+
+        time.sleep(30)
 # MQTT callbacks
 
 def on_connect(client, userdata, flags, reason_code, properties):
@@ -118,6 +132,9 @@ class OplaController:
 
         self.ranta_reading = None
         self.ranta_last_update = None
+
+        self.weather_data = None
+        self.weather_last_update = None
 
         self.sauna_on = None
         self.last_control_state = 0
@@ -282,10 +299,28 @@ class OplaController:
         heater_on = protection.get("heater_on") is True
         frost_alarm = protection.get("frost_alarm") is True
 
+        automatic_enabled = protection.get("automatic_enabled")
+        remote_requested = protection.get("remote_requested")
+
+        automatic_text = (
+            "Käytössä" if automatic_enabled is True
+            else "Pois käytöstä" if automatic_enabled is False
+            else "Ei tiedossa"
+        )
+
+        remote_text = (
+            "Aktiivinen" if remote_requested is True
+            else "Ei aktiivinen" if remote_requested is False
+            else "Ei tiedossa"
+        )
+
         self.write(12, "Putkilämmitin (sim.): " + ("PÄÄLLÄ" if heater_on else "POIS"))
+
         self.write(13, "PAKKASHÄLYTYS" if frost_alarm else "Ei pakkashälytystä",
                    curses.color_pair(3 if frost_alarm else 1))
 
+        self.write(15, "Automatiikka: " + automatic_text)
+        self.write(16, "Etälämmitys: " + remote_text)
     def draw_edit(self):
 
         fields = [
@@ -317,6 +352,147 @@ class OplaController:
             self.write(13, "OK to continue")
         if self.edit_step == 0:
             self.write(15, "- / + changes name number")
+
+    def draw_notifications(self):
+        self.write(4, "NOTIFICATIONS", curses.A_BOLD)
+
+        now = time.monotonic()
+        status = latest_status.copy()
+        warnings = []
+
+        # Kotisauna
+
+        self.write(6, "KOTISAUNA", curses.A_BOLD)
+
+        message, led, color = self.readiness_display(status)
+
+        if color == 3:
+            message = "Sauna status unknown"
+
+        self.write(7, message, curses.color_pair(color))
+
+        # Connection and Kotisauna checks
+
+        if not connected:
+            warnings.append(("Connection lost", 3))
+
+        else:
+            sensor_fresh = (
+                bool(status)
+                and now - last_message <= 15
+                and status.get("state") not in ("error", "unknown")
+                and status.get("temperature") is not None
+                and status.get("humidity") is not None
+            )
+
+            if not sensor_fresh:
+                warnings.append(("Kotisauna data unavailable", 3))
+
+            if not self.control_available():
+                warnings.append(("Sauna control unavailable", 3))
+
+        # Rantasauna checks
+
+        reading = self.ranta_reading
+
+        ranta_fresh = (
+            reading is not None
+            and self.ranta_last_update is not None
+            and now - self.ranta_last_update <= 10
+            and reading.get("id") is not None
+            and reading.get("temperature") is not None
+            and reading.get("humidity") is not None
+            and (reading.get("frost_protection") or {}).get("state")
+                == "automatic"
+        )
+
+        if not ranta_fresh:
+            warnings.append(("Rantasauna data unavailable", 3))
+            warnings.append(("Frost protection unknown", 3))
+
+        else:
+            protection = reading.get("frost_protection") or {}
+
+            if protection.get("frost_alarm") is True:
+                warnings.append(("Rantasauna frost alarm!", 3))
+
+            if protection.get("automatic_enabled") is False:
+                warnings.append(("Frost protection disabled", 2))
+
+            elif protection.get("automatic_enabled") is not True:
+                warnings.append(("Frost protection unknown", 3))
+
+        # Rantasauna weather forecast
+
+        self.write(9, "RANTASAUNA - FORECAST", curses.A_BOLD)
+
+        weather = self.weather_data
+        average = None
+        weather_warning = None
+
+        if self.weather_last_update is None:
+            weather_warning = "Waiting for weather data"
+
+        elif (
+            weather is None
+            or now - self.weather_last_update > 45
+        ):
+            weather_warning = "Weather forecast unavailable"
+
+        elif weather.get("status") == "error":
+            weather_warning = "Weather forecast unavailable"
+
+        elif weather.get("stale"):
+            weather_warning = "Weather forecast outdated"
+
+        else:
+            forecast = weather.get("forecast") or {}
+            value = forecast.get("average_temperature_c")
+
+            if type(value) in (int, float):
+                average = value
+            else:
+                weather_warning = "Waiting for weather data"
+
+        if average is not None:
+            self.write(10, f"Forecast: {average:.1f} ° C")
+
+            if average < 0:
+                self.write(
+                    11,
+                    "Freezing weather expected",
+                    curses.color_pair(2)
+                )
+
+            else:
+                self.write(
+                    11,
+                    "Average at or above freezing",
+                    curses.color_pair(1)
+                )
+
+        else:
+            self.write(10, "Forecast: -- ° C")
+
+        if weather_warning:
+            warnings.append((weather_warning, 2))
+
+        # Simplified system status
+
+        self.write(13, "SYSTEM STATUS", curses.A_BOLD)
+
+        if not warnings:
+            self.write(
+                14,
+                "All systems OK",
+                curses.color_pair(1)
+            )
+
+        else:
+            warnings.sort(key=lambda item: item[1], reverse=True)
+
+            for row, (warning, color) in enumerate(warnings, start=14):
+                self.write(row, warning, curses.color_pair(color))
 
     def draw(self):
 
@@ -362,10 +538,7 @@ class OplaController:
             self.draw_menu(self.menu_items(), 8)
 
         elif self.page == "notifications":
-            self.write(4, "NOTIFICATIONS")
-
-            message, led, color = self.readiness_display(latest_status.copy())
-            self.write(6, message, curses.color_pair(color))
+            self.draw_notifications()
 
         if self.notification:
             self.write(19, self.notification)
@@ -476,6 +649,10 @@ class OplaController:
             if kind == "ranta_status":
                 self.ranta_reading = data
                 self.ranta_last_update = time.monotonic()
+                continue
+            if kind == "weather_status":
+                self.weather_data = data
+                self.weather_last_update = time.monotonic()
                 continue
             if kind == "control_reset":
                 self.sauna_on = None
@@ -632,7 +809,10 @@ class OplaController:
 
 def main(screen):
     controller = OplaController(screen)
+
     Thread(target=poll_ranta, daemon=True).start()
+    Thread(target=poll_weather, daemon=True).start()
+
     controller.run()
 
 

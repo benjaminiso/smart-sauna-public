@@ -15,10 +15,20 @@
     timeZone: "Europe/Helsinki",
   });
 
-  function showStatus(message) {
+  function showStatus(message, color = "success") {
     if (status.textContent !== message) {
       status.textContent = message;
     }
+
+    status.classList.remove(
+      "status-active",
+      "status-inactive",
+      "status-success",
+      "status-warning",
+      "status-error"
+    );
+
+    status.classList.add("status-" + color);
   }
 
   async function refreshWeather() {
@@ -27,7 +37,10 @@
         cache: "no-store",
         signal: AbortSignal.timeout(5000),
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
 
       const weather = await response.json();
       const forecast = weather.forecast;
@@ -35,20 +48,37 @@
       const fetchedAt = Date.parse(forecast?.fetched_at);
 
       location.textContent = weather.location ?? "";
+
       average.textContent = Number.isFinite(value)
         ? `${numberFormat.format(value)} °C${weather.stale ? " (aiempi ennuste)" : ""}`
         : "—";
+
       fetched.textContent = Number.isFinite(fetchedAt)
         ? dateTimeFormat.format(fetchedAt)
         : "—";
 
+      let color = "success";
+
+      if (weather.status === "error") {
+        color = "error";
+      } else if (
+        weather.status === "waiting" ||
+        weather.stale ||
+        !Number.isFinite(value)
+      ) {
+        color = "warning";
+      }
+
       showStatus(
         weather.message ??
-          `Keskiarvo laskettiin hakuhetkellä ${forecast?.hours_used ?? 0} ennustetunnista.`
+          `Keskiarvo laskettiin hakuhetkellä ${forecast?.hours_used ?? 0} ennustetunnista.`,
+        color
       );
+
     } catch {
       showStatus(
-        "Ennustetietoa ei saatu palvelimelta. Näkyvät tiedot voivat olla vanhoja."
+        "Ennustetietoa ei saatu palvelimelta. Näkyvät tiedot voivat olla vanhoja.",
+        "error"
       );
     } finally {
       setTimeout(refreshWeather, 30_000);

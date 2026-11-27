@@ -284,6 +284,82 @@
                 margin-bottom: 10px;
             }
         }
+        /* Rantasauna status colors */
+.status-active {
+    color: #ffa500 !important;
+    font-weight: bold;
+}
+
+.status-inactive {
+    color: #9ca3af !important;
+}
+
+.status-success {
+    color: #22c55e !important;
+    font-weight: bold;
+}
+
+.status-warning {
+    color: #ffa500 !important;
+    font-weight: bold;
+}
+
+.status-error {
+    color: #ef4444 !important;
+    font-weight: bold;
+}
+/* Rantasauna heating controls */
+
+.ranta-divider {
+    border: 0;
+    border-top: 1px solid #444;
+    margin: 24px 0;
+}
+
+.ranta-heater-box {
+    background: #191919;
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 20px;
+}
+
+.ranta-heater-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.ranta-muted {
+    color: #aaa;
+    font-size: 0.9rem;
+}
+
+.ranta-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.ranta-buttons button:disabled {
+    background: #383838;
+    color: #888;
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+.ranta-warning {
+    color: #ffa500;
+    background: #302719;
+    border-left: 3px solid #ffa500;
+    padding: 12px;
+    border-radius: 5px;
+}
+
+#rantaCommandStatus {
+    min-height: 20px;
+}
     </style>
 </head>
 
@@ -327,13 +403,83 @@
             <dd id="rantaTimestamp">—</dd>
         </dl>
         <p id="rantaStatus" role="status">Odotetaan mittauksia.</p>
-        <p>Putkilämmitin (simuloitu): <strong id="rantaHeater">—</strong></p>
-        <p>Pakkashälytys: <strong id="rantaFrostAlarm">—</strong></p>
-        <p>Automaattinen lämmityspyyntö: <strong id="rantaAutoRequest">—</strong></p>
-        <p>Etälämmityspyyntö: <strong id="rantaRemoteRequest">—</strong></p>
-        <button id="rantaRequestHeat" type="button">Pyydä lämmitystä</button>
-        <button id="rantaReturnToAuto" type="button">Palaa automatiikkaan</button>
-        <p id="rantaCommandStatus" role="status"></p>
+<hr class="ranta-divider">
+
+<h3>Putkien jäätymissuoja</h3>
+
+<div class="ranta-heater-box">
+    <span class="ranta-muted">
+        Putkilämmitin (simuloitu)
+    </span>
+
+    <div id="rantaHeater" class="ranta-heater-value">
+        —
+    </div>
+
+    <p id="rantaHeatingReason" class="ranta-muted">
+        Odotetaan tietoja.
+    </p>
+</div>
+
+<dl>
+    <dt>Pakkashälytys</dt>
+    <dd id="rantaFrostAlarm">—</dd>
+</dl>
+
+<hr class="ranta-divider">
+
+<h3>Automaattinen jäätymissuoja</h3>
+
+<dl>
+    <dt>Automatiikka</dt>
+    <dd id="rantaAutomaticEnabled">—</dd>
+
+    <dt>Lämmitysraja</dt>
+    <dd>+3 °C</dd>
+
+    <dt>Automaattinen lämmitys</dt>
+    <dd id="rantaAutoRequest">—</dd>
+</dl>
+
+<div class="ranta-buttons">
+    <button id="rantaEnableAutomatic" type="button" disabled>
+        Ota automatiikka käyttöön
+    </button>
+
+    <button id="rantaDisableAutomatic" type="button" disabled>
+        Poista automatiikka käytöstä
+    </button>
+</div>
+
+<p id="rantaAutomaticWarning"
+   class="ranta-warning"
+   hidden>
+    Automaattinen jäätymissuoja ei ole käytössä.
+    Lämmitin ei käynnisty automaattisesti lämpötilan laskiessa.
+</p>
+
+<hr class="ranta-divider">
+
+<h3>Etäohjaus</h3>
+
+<dl>
+    <dt>Etälämmitys</dt>
+    <dd id="rantaRemoteRequest">—</dd>
+</dl>
+
+<div class="ranta-buttons">
+    <button id="rantaRequestHeat" type="button" disabled>
+        Käynnistä etälämmitys
+    </button>
+
+    <button id="rantaReturnToAuto" type="button" disabled>
+        Lopeta etälämmitys
+    </button>
+</div>
+
+<p id="rantaCommandStatus" role="status"></p>
+
+<hr class="ranta-divider">
         <section aria-labelledby="rantaWeatherTitle">
             <h3 id="rantaWeatherTitle">Sääennuste</h3>
             <p id="rantaWeatherLocation"></p>

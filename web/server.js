@@ -2,6 +2,7 @@
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
+const fs = require("fs");
 const saunaMqtt = require("./mqtt");
 const rantaWeather = require("./ranta-weather");
 const app = express();
@@ -68,6 +69,25 @@ function getMeasurementSauna(req) {
 
 // Tallennetaan vain palvelimen muistiin. Uudelleenkäynnistys palauttaa automatiikan.
 let rantaRemoteRequest = false;
+let rantaAutomaticEnabled = true;
+
+const rantaSettingsPath = path.join(
+  __dirname, "..", "database", "ranta-settings.json"
+);
+
+try {
+  const settings = JSON.parse(
+    fs.readFileSync(rantaSettingsPath, "utf8")
+  );
+
+  if (typeof settings.automatic_enabled === "boolean") {
+    rantaAutomaticEnabled = settings.automatic_enabled;
+  }
+} catch (error) {
+  if (error.code !== "ENOENT") {
+    console.warn("Rantasaunan asetuksia ei voitu lukea:", error.message);
+  }
+}
 
 app.get("/api/ranta/weather", (req, res) => {
   res.set("Cache-Control", "no-store");
@@ -84,7 +104,41 @@ app.put("/api/ranta/pipe-heater", (req, res) => {
   rantaRemoteRequest = requested;
   res.json({ remote_requested: rantaRemoteRequest });
 });
+app.put("/api/ranta/frost-protection", (req, res) => {
+  const enabled = req.body?.automatic_enabled;
 
+  if (typeof enabled !== "boolean") {
+    return res.status(400).json({
+      error: "automatic_enabled pitää olla true tai false."
+    });
+  }
+
+  try {
+    fs.writeFileSync(
+      rantaSettingsPath + ".tmp",
+      JSON.stringify({
+        automatic_enabled: enabled
+      }, null, 2)
+    );
+
+    fs.renameSync(
+      rantaSettingsPath + ".tmp",
+      rantaSettingsPath
+    );
+
+    rantaAutomaticEnabled = enabled;
+
+    res.json({
+      automatic_enabled: rantaAutomaticEnabled
+    });
+  } catch (error) {
+    console.error("Asetusten tallennus epäonnistui:", error);
+
+    res.status(500).json({
+      error: "Asetusten tallennus epäonnistui."
+    });
+  }
+});
 function getRantaFrostProtection(reading) {
   const savedAt = typeof reading.timestamp === "string"
     ? Date.parse(reading.timestamp.replace(" ", "T") + "Z")
@@ -97,23 +151,29 @@ function getRantaFrostProtection(reading) {
   ) {
     return {
       state: "unknown",
+      automatic_enabled: rantaAutomaticEnabled,
       heating_requested: null,
       frost_alarm: null,
       remote_requested: rantaRemoteRequest,
       heater_on: null,
     };
   }
-const automaticRequest = reading.temperature < 3;
 
-return {
-  state: "automatic",
-  heating_requested: automaticRequest,
-  remote_requested: rantaRemoteRequest,
-  heater_on: automaticRequest || rantaRemoteRequest,
-  frost_alarm: reading.temperature < 0,
-};
+  const automaticRequest =
+    rantaAutomaticEnabled && reading.temperature < 3;
 
+  return {
+    state: "automatic",
+    automatic_enabled: rantaAutomaticEnabled,
+    heating_requested: automaticRequest,
+    remote_requested: rantaRemoteRequest,
+    heater_on: automaticRequest || rantaRemoteRequest,
+    frost_alarm: reading.temperature < 0,
+  };
 }
+
+
+
 
 app.get("/api/latest", (req, res) => {
   const saunaId = getMeasurementSauna(req);

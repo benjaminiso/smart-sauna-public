@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Smart Sauna</title>
 
@@ -52,9 +51,7 @@
 
         .charts {
             display: grid;
-            grid-template-columns: repeat(
-                auto-fit, minmax(min(100%, 400px), 1fr)
-            );
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
             gap: 20px;
             margin-top: 25px;
         }
@@ -77,7 +74,8 @@
             background: #262626;
         }
 
-        th, td {
+        th,
+        td {
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #444;
@@ -91,200 +89,201 @@
             color: lightgray;
         }
 
-.profile-section {
-    background: #262626;
-    padding: 25px;
-    border-radius: 12px;
-    margin-top: 25px;
-}
+        .profile-section {
+            background: #262626;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 25px;
+        }
 
-.profile-section label {
-    display: block;
-    margin-top: 15px;
-    margin-bottom: 5px;
-}
+        .profile-section label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
 
-.profile-section input {
-    background: #333;
-    color: white;
-    border: 1px solid #555;
-    border-radius: 6px;
-    padding: 10px;
-    width: 100%;
-    max-width: 350px;
-    box-sizing: border-box;
-}
+        .profile-section input {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 10px;
+            width: 100%;
+            max-width: 350px;
+            box-sizing: border-box;
+        }
 
-.profile-row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 12px;
-    border-bottom: 1px solid #444;
-}
+        .profile-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            padding: 12px;
+            border-bottom: 1px solid #444;
+        }
 
-.profile-row span {
-    flex: 1;
-}
+        .profile-row span {
+            flex: 1;
+        }
 
-.profile-buttons {
-    margin-top: 20px;
-}
+        .profile-buttons {
+            margin-top: 20px;
+        }
 
-button {
-    background: orange;
-    color: black;
-    border: none;
-    border-radius: 6px;
-    padding: 10px 15px;
-    margin: 4px;
-    cursor: pointer;
-    font-weight: bold;
-}
+        button {
+            background: orange;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
 
-button:hover {
-    background: #ffbf47;
-}
+        button:hover {
+            background: #ffbf47;
+        }
 
-button:disabled {
-    opacity: 0.5;
-    cursor: default;
-}
+        button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
 
 
-.readiness-section {
-    background: #262626;
-    padding: 25px;
-    border-radius: 12px;
-    margin-top: 25px;
-}
+        .readiness-section {
+            background: #262626;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 25px;
+        }
 
-.readiness-section h2 {
-    margin-top: 0;
-}
+        .readiness-section h2 {
+            margin-top: 0;
+        }
 
-#readyMessage {
-    font-size: 32px;
-    margin: 15px 0;
-}
+        #readyMessage {
+            font-size: 32px;
+            margin: 15px 0;
+        }
 
-#readyTemperature,
-#readyHumidity {
-    font-size: 18px;
-    font-weight: bold;
-}
+        #readyTemperature,
+        #readyHumidity {
+            font-size: 18px;
+            font-weight: bold;
+        }
 
-#readyProfile {
-    color: lightgray;
-}
+        #readyProfile {
+            color: lightgray;
+        }
 
-#readyConnection {
-    font-size: 14px;
-    margin-bottom: 0;
-}
-/* Sauna ON/OFF controls */
+        #readyConnection {
+            font-size: 14px;
+            margin-bottom: 0;
+        }
 
-.control-section {
-    background: #262626;
-    padding: 25px;
-    border-radius: 12px;
-    margin-top: 25px;
-}
+        /* Sauna ON/OFF controls */
 
-.control-section h2 {
-    margin-top: 0;
-}
+        .control-section {
+            background: #262626;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 25px;
+        }
 
-#saunaState {
-    font-size: 32px;
-    font-weight: bold;
-    margin: 15px 0;
-}
+        .control-section h2 {
+            margin-top: 0;
+        }
 
-#controlMessage {
-    color: lightgray;
-    font-size: 14px;
-}
+        #saunaState {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 15px 0;
+        }
 
-#saunaState.on {
-    color: lightgreen;
-}
+        #controlMessage {
+            color: lightgray;
+            font-size: 14px;
+        }
 
-#saunaState.off {
-    color: lightgray;
-}
+        #saunaState.on {
+            color: lightgreen;
+        }
 
-#saunaState.unknown {
-    color: orange;
-}
-/* Keskitä sisältöalue, älä yksittäisiä tekstejä. */
-body {
-  max-width: 1150px;
-  margin-inline: auto;
-  padding: clamp(16px, 3vw, 32px);
-  font-size: 1rem;
-  line-height: 1.5;
-}
+        #saunaState.off {
+            color: lightgray;
+        }
 
-/* Selkeä reunus sekä vanhoille että uusille osioille. */
-.card,
-.control-section,
-.readiness-section,
-.profile-section,
-.chart-card {
-  border: 1px solid #4a4a4a;
-}
+        #saunaState.unknown {
+            color: orange;
+        }
 
-.ranta-card {
-  margin-top: 24px;
-  border-color: #36718a;
-}
+        /* Keskitä sisältöalue, älä yksittäisiä tekstejä. */
+        body {
+            max-width: 1150px;
+            margin-inline: auto;
+            padding: clamp(16px, 3vw, 32px);
+            font-size: 1rem;
+            line-height: 1.5;
+        }
 
-.ranta-card h2 {
-  margin-top: 0;
-}
+        /* Selkeä reunus sekä vanhoille että uusille osioille. */
+        .card,
+        .control-section,
+        .readiness-section,
+        .profile-section,
+        .chart-card {
+            border: 1px solid #4a4a4a;
+        }
 
-.ranta-card dl {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 10px 20px;
-  max-width: 34rem;
-}
+        .ranta-card {
+            margin-top: 24px;
+            border-color: #36718a;
+        }
 
-.ranta-card dd {
-  margin: 0;
-  text-align: right;
-}
+        .ranta-card h2 {
+            margin-top: 0;
+        }
 
-#rantaTemperature,
-#rantaHumidity {
-  font-size: 1.65rem;
-  font-weight: bold;
-}
+        .ranta-card dl {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: baseline;
+            gap: 10px 20px;
+            max-width: 34rem;
+        }
 
-#rantaTemperature {
-  color: orange;
-}
+        .ranta-card dd {
+            margin: 0;
+            text-align: right;
+        }
 
-#rantaHumidity {
-  color: deepskyblue;
-}
+        #rantaTemperature,
+        #rantaHumidity {
+            font-size: 1.65rem;
+            font-weight: bold;
+        }
 
-/* Kapealla näytöllä arvo tulee otsikon alle. */
-@media (max-width: 480px) {
-  .ranta-card dl {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
+        #rantaTemperature {
+            color: orange;
+        }
 
-  .ranta-card dd {
-    text-align: left;
-    margin-bottom: 10px;
-  }
-}
+        #rantaHumidity {
+            color: deepskyblue;
+        }
 
+        /* Kapealla näytöllä arvo tulee otsikon alle. */
+        @media (max-width: 480px) {
+            .ranta-card dl {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
+
+            .ranta-card dd {
+                text-align: left;
+                margin-bottom: 10px;
+            }
+        }
     </style>
 </head>
 
@@ -316,76 +315,87 @@ body {
     </div>
 
 
-<section class="card ranta-card" aria-labelledby="rantaTitle">
-  <h2 id="rantaTitle">Rantasauna</h2>
-  <p>Puukiuas – ei etäohjausta</p>
-  <dl>
-    <dt>Lämpötila</dt>
-    <dd id="rantaTemperature">—</dd>
-    <dt>Ilmankosteus</dt>
-    <dd id="rantaHumidity">—</dd>
-    <dt>Viimeisin tallennus (UTC)</dt>
-    <dd id="rantaTimestamp">—</dd>
-  </dl>
-  <p id="rantaStatus" role="status">Odotetaan mittauksia.</p>
-  <p>Putkilämmitin (simuloitu): <strong id="rantaHeater">—</strong></p>
-  <p>Pakkashälytys: <strong id="rantaFrostAlarm">—</strong></p>
-  <p>Automaattinen lämmityspyyntö: <strong id="rantaAutoRequest">—</strong></p>
-  <p>Etälämmityspyyntö: <strong id="rantaRemoteRequest">—</strong></p>
-  <button id="rantaRequestHeat" type="button">Pyydä lämmitystä</button>
-  <button id="rantaReturnToAuto" type="button">Palaa automatiikkaan</button>
-  <p id="rantaCommandStatus" role="status"></p>
+    <section class="card ranta-card" aria-labelledby="rantaTitle">
+        <h2 id="rantaTitle">Rantasauna</h2>
+        <p>Puukiuas – ei etäohjausta</p>
+        <dl>
+            <dt>Lämpötila</dt>
+            <dd id="rantaTemperature">—</dd>
+            <dt>Ilmankosteus</dt>
+            <dd id="rantaHumidity">—</dd>
+            <dt>Viimeisin tallennus (UTC)</dt>
+            <dd id="rantaTimestamp">—</dd>
+        </dl>
+        <p id="rantaStatus" role="status">Odotetaan mittauksia.</p>
+        <p>Putkilämmitin (simuloitu): <strong id="rantaHeater">—</strong></p>
+        <p>Pakkashälytys: <strong id="rantaFrostAlarm">—</strong></p>
+        <p>Automaattinen lämmityspyyntö: <strong id="rantaAutoRequest">—</strong></p>
+        <p>Etälämmityspyyntö: <strong id="rantaRemoteRequest">—</strong></p>
+        <button id="rantaRequestHeat" type="button">Pyydä lämmitystä</button>
+        <button id="rantaReturnToAuto" type="button">Palaa automatiikkaan</button>
+        <p id="rantaCommandStatus" role="status"></p>
+        <section aria-labelledby="rantaWeatherTitle">
+            <h3 id="rantaWeatherTitle">Sääennuste</h3>
+            <p id="rantaWeatherLocation"></p>
+            <dl>
+                <dt>Päivän jäljellä olevien ennustetuntien keskilämpötila</dt>
+                <dd id="rantaWeatherAverage">—</dd>
+                <dt>Viimeisin onnistunut haku (Suomen aikaa)</dt>
+                <dd id="rantaWeatherFetched">—</dd>
+            </dl>
+            <p id="rantaWeatherStatus" role="status">Odotetaan sääennustetta.</p>
+        </section>
 
-</section>
+    </section>
 
 
 
-<div class="control-section">
+    <div class="control-section">
 
-    <h2>Sauna control</h2>
+        <h2>Sauna control</h2>
 
-    <div id="saunaState" class="unknown">
-        Loading sauna state...
+        <div id="saunaState" class="unknown">
+            Loading sauna state...
+        </div>
+
+        <button id="saunaOnButton" disabled>
+            Turn ON
+        </button>
+
+        <button id="saunaOffButton" disabled>
+            Turn OFF
+        </button>
+
+        <p id="controlMessage">
+            Connecting to backend...
+        </p>
+
     </div>
+    <div class="readiness-section">
 
-    <button id="saunaOnButton" disabled>
-        Turn ON
-    </button>
+        <h2>Sauna readiness</h2>
 
-    <button id="saunaOffButton" disabled>
-        Turn OFF
-    </button>
+        <p id="readyProfile">
+            Active profile: --
+        </p>
 
-    <p id="controlMessage">
-        Connecting to backend...
-    </p>
+        <h1 id="readyMessage">
+            Waiting for sauna data...
+        </h1>
 
-</div>
-<div class="readiness-section">
+        <p id="readyTemperature">
+            Temperature: --
+        </p>
 
-    <h2>Sauna readiness</h2>
+        <p id="readyHumidity">
+            Humidity: --
+        </p>
 
-    <p id="readyProfile">
-        Active profile: --
-    </p>
+        <p id="readyConnection">
+            Connecting...
+        </p>
 
-    <h1 id="readyMessage">
-        Waiting for sauna data...
-    </h1>
-
-    <p id="readyTemperature">
-        Temperature: --
-    </p>
-
-    <p id="readyHumidity">
-        Humidity: --
-    </p>
-
-    <p id="readyConnection">
-        Connecting...
-    </p>
-
-</div>
+    </div>
 
     <div class="charts">
 
@@ -407,45 +417,40 @@ body {
 
     </div>
 
-<div class="profile-section">
+    <div class="profile-section">
 
-    <h2>Sauna user profiles</h2>
+        <h2>Sauna user profiles</h2>
 
-    <div id="profileList"></div>
+        <div id="profileList"></div>
 
-    <h3>Create or edit profile</h3>
+        <h3>Create or edit profile</h3>
 
-    <label>Profile name</label>
-    <input type="text" id="profileName"
-           placeholder="Enter name">
+        <label>Profile name</label>
+        <input type="text" id="profileName" placeholder="Enter name">
 
-    <label>Preferred temperature (°C)</label>
-    <input type="number" id="targetTemperature"
-           min="20" max="100" value="75"
-           step="any" required>
+        <label>Preferred temperature (°C)</label>
+        <input type="number" id="targetTemperature" min="20" max="100" value="75" step="any" required>
 
-    <label>Preferred humidity (%)</label>
-    <input type="number" id="targetHumidity"
-           min="0" max="100" value="40"
-           step="any" required>
+        <label>Preferred humidity (%)</label>
+        <input type="number" id="targetHumidity" min="0" max="100" value="40" step="any" required>
 
-    <div class="profile-buttons">
+        <div class="profile-buttons">
 
-        <button onclick="saveProfile()">
-            Save profile
-        </button>
+            <button onclick="saveProfile()">
+                Save profile
+            </button>
 
-        <button onclick="newProfile()">
-            New profile
-        </button>
+            <button onclick="newProfile()">
+                New profile
+            </button>
 
-        <button onclick="deleteProfile()">
-            Delete profile
-        </button>
+            <button onclick="deleteProfile()">
+                Delete profile
+            </button>
+
+        </div>
 
     </div>
-
-</div>
 
     <h2>Recent measurements</h2>
 
@@ -653,9 +658,11 @@ body {
 
     </script>
 
-<script src="/profiles.js"></script>
-<script src="/readiness.js"></script>
-<script src="/control.js"></script>
-<script src="/ranta.js"></script>
+    <script src="/profiles.js"></script>
+    <script src="/readiness.js"></script>
+    <script src="/control.js"></script>
+    <script src="/ranta.js"></script>
+    <script src="/ranta-weather-ui.js"></script>
 </body>
+
 </html>

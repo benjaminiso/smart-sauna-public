@@ -273,10 +273,10 @@ class OplaController:
 
         protection = reading.get("frost_protection") or {}
         if protection.get("state") != "automatic":
-            self.write(10, "Mittaus vanhentunut tai virheellinen",
+            self.write(10, "Mittaus ei ole ajan tasalla",
                        curses.color_pair(3))
             self.write(12, "Putkilämmitin: ei tiedossa")
-            self.write(13, "Pakkashälytys: ei arvioitavissa")
+            self.write(13, "Pakkashälytys: ei tiedossa")
             return
 
         heater_on = protection.get("heater_on") is True

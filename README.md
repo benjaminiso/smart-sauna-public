@@ -2,7 +2,7 @@
 1. Kopioi .env.example → .env
 2. Täytä omat tunnukset
 3. lataa .env jokaiseen terminaaliin (set -a; . ./.env; set +a)
-4. Käynnistä palvelut järjestyksessä 1→6 )
+4. Käynnistä palvelut järjestyksessä 1→7 )
 
 
 
@@ -24,5 +24,6 @@ Järjestys	Komento
 4			python3 mqtt-server/readiness.py
 5			python3 mqtt-server/simulator.py
 6			python3 opla-controller/opla_simulator.py
+7			python3 mqtt-server/ranta_simulator.py
 
 Web-palvelin käynnistetään ensin, koska se alustaa sauna_state-taulun.

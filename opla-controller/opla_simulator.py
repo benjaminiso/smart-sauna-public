@@ -5,6 +5,9 @@ import time
 import re
 import uuid
 from queue import SimpleQueue, Empty
+from http.client import HTTPException
+from threading import Thread
+from urllib.request import urlopen
 
 import paho.mqtt.client as mqtt
 import os
@@ -29,6 +32,25 @@ connected = False
 latest_status = {}
 last_message = 0
 
+RANTA_URL = "http://127.0.0.1:3000/api/latest?sauna=ranta"
+
+
+def poll_ranta():
+    while True:
+        try:
+            with urlopen(RANTA_URL, timeout=3) as response:
+                reading = json.load(response)
+
+            if not isinstance(reading, dict):
+                raise ValueError("Invalid Rantasauna response")
+            if reading.get("id") is not None and reading.get("sauna_id") != "ranta":
+                raise ValueError("Unexpected sauna ID")
+
+            events.put(("ranta_status", reading))
+        except (OSError, HTTPException, ValueError):
+            events.put(("ranta_status", None))
+
+        time.sleep(3)
 
 # MQTT callbacks
 
@@ -88,10 +110,14 @@ profiles = []
 class OplaController:
 
     def __init__(self, screen):
+
         self.screen = screen
         self.page = "home"
         self.selected = 0
         self.history = []
+
+        self.ranta_reading = None
+        self.ranta_last_update = None
 
         self.sauna_on = None
         self.last_control_state = 0
@@ -150,7 +176,8 @@ class OplaController:
                 ("Sauna control unavailable" if not self.control_available()
                  else "Turn sauna OFF" if self.sauna_on else "Turn sauna ON"),
                 "Profiles",
-                "Notifications"
+                "Notifications",
+                "Rantasauna"
             ]
 
         if self.page == "profiles":
@@ -224,6 +251,41 @@ class OplaController:
         self.write(15, "LED: " + led, curses.color_pair(color))
         self.write(17, "Press OK to open menu")
 
+    def draw_ranta(self):
+        self.write(4, "RANTASAUNA", curses.A_BOLD)
+        self.write(5, "Puukiuas - ei etäohjausta")
+
+        if self.ranta_last_update is None:
+            self.write(7, "Odotetaan Rantasaunan tietoja...")
+            return
+
+        reading = self.ranta_reading
+        if reading is None or time.monotonic() - self.ranta_last_update > 10:
+            self.write(7, "Rantasaunan API ei vastaa", curses.color_pair(3))
+            return
+
+        if reading.get("id") is None:
+            self.write(7, "Ei vielä tallennettuja mittauksia")
+            return
+
+        self.write(7, f"Lämpötila: {reading.get('temperature', '-')} C")
+        self.write(8, f"Ilmankosteus: {reading.get('humidity', '-')} %")
+
+        protection = reading.get("frost_protection") or {}
+        if protection.get("state") != "automatic":
+            self.write(10, "Mittaus vanhentunut tai virheellinen",
+                       curses.color_pair(3))
+            self.write(12, "Putkilämmitin: ei tiedossa")
+            self.write(13, "Pakkashälytys: ei arvioitavissa")
+            return
+
+        heater_on = protection.get("heater_on") is True
+        frost_alarm = protection.get("frost_alarm") is True
+
+        self.write(12, "Putkilämmitin (sim.): " + ("PÄÄLLÄ" if heater_on else "POIS"))
+        self.write(13, "PAKKASHÄLYTYS" if frost_alarm else "Ei pakkashälytystä",
+                   curses.color_pair(3 if frost_alarm else 1))
+
     def draw_edit(self):
 
         fields = [
@@ -270,6 +332,9 @@ class OplaController:
         elif self.page == "menu":
             self.write(4, "MAIN MENU")
             self.draw_menu(self.menu_items(), 6)
+
+        elif self.page == "ranta":
+            self.draw_ranta()
 
         elif self.page == "profiles":
             self.write(4, "PROFILES - DATABASE" if self.loaded else "WAITING FOR PROFILES")
@@ -408,6 +473,10 @@ class OplaController:
                 kind, data = events.get_nowait()
             except Empty:
                 break
+            if kind == "ranta_status":
+                self.ranta_reading = data
+                self.ranta_last_update = time.monotonic()
+                continue
             if kind == "control_reset":
                 self.sauna_on = None
                 self.last_control_state = 0
@@ -472,6 +541,9 @@ class OplaController:
 
             elif self.selected == 2:
                 self.open_page("notifications")
+
+            elif self.selected == 3:
+                self.open_page("ranta")
 
         elif self.page == "profiles":
 
@@ -560,6 +632,7 @@ class OplaController:
 
 def main(screen):
     controller = OplaController(screen)
+    Thread(target=poll_ranta, daemon=True).start()
     controller.run()
 
 

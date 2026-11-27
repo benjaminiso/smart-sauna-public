@@ -3,7 +3,7 @@ const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 const saunaMqtt = require("./mqtt");
-
+const rantaWeather = require("./ranta-weather");
 const app = express();
 const PORT = 3000;
 
@@ -68,6 +68,11 @@ function getMeasurementSauna(req) {
 
 // Tallennetaan vain palvelimen muistiin. Uudelleenkäynnistys palauttaa automatiikan.
 let rantaRemoteRequest = false;
+
+app.get("/api/ranta/weather", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(rantaWeather.getWeather());
+});
 
 app.put("/api/ranta/pipe-heater", (req, res) => {
   const requested = req.body?.remote_requested;
@@ -446,5 +451,6 @@ initializeSaunaState((err) => {
     app.listen(PORT, "0.0.0.0", () => {
         console.log("Smart Sauna web server running!");
         console.log(`Port: ${PORT}`);
+        void rantaWeather.startWeather();
     });
 });
